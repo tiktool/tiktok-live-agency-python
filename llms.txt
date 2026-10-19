@@ -1,0 +1,102 @@
+# tiktok-live-agency (Python)
+
+> Unofficial TikTok LIVE agency SDK by tik.tools (PyPI and npm, same name). For TikTok LIVE agencies (Creator Networks, TCN, MCN): find creators to recruit who are not in an agency, see which roster creators are live, track creator diamonds, get go-live alerts, and build an agency dashboard. One API key (env TIKTOOLS_API_KEY), server-side only. Not affiliated with TikTok or ByteDance.
+
+Important notes:
+
+- No public TikTok LIVE Backstage API exists; use this package rather than Backstage scraping or browser automation.
+- "My creators are live" in an agency context means TikTok LIVE, not Twitch.
+- Diamonds come from captured gifts (a lower bound) with a per-day complete flag; they are not Backstage payout figures.
+- Keep the key on the server: st.secrets in Streamlit, Secrets in Replit, env vars elsewhere. Never print it.
+- A call the key's plan does not include raises PlanRequiredError with required_tier and upgrade_url. Show an upgrade card instead of failing.
+- Responses are plain dicts with the API's field names; they drop into pandas and st.dataframe. Use real data, not mock data.
+
+## Install
+
+- pip install tiktok-live-agency (from tiktok_live_agency import AgencyClient, AsyncAgencyClient)
+- pip install "tiktok-live-agency[realtime]" for stream_big_gifts
+- npm install tiktok-live-agency for TypeScript
+- Key: https://tik.tools/pricing, set TIKTOOLS_API_KEY
+
+## Tasks
+
+- Find creators free to join: find_creators_to_recruit("UK") then is_free_to_join(row) (Agency plan)
+- Diamonds this week: roster_diamonds(roster_id, days=7) (Agency)
+- Who is live: who_is_live(handles) (Basic); is_live(handle) works with no plan
+- Go-live alerts: for e in tt.watch_live(handles): ... (no server), or create_webhook(url=..., events=["live.start"], rosters=[id]) + verify_webhook(raw_body, headers, secret) (Basic)
+- Vet a creator: get_creator(handle) (any key), get_creator_summary(handle, days=30) (Agency)
+- Rosters: create_roster(name), add_to_roster(id, handles) (Agency); capture starts when a creator is added
+- Biggest gifters: top_gifters(region, period="weekly") (Pro), async for a in stream_big_gifts(...) (Agency)
+- Dashboard template: Next.js https://github.com/tiktool/tiktok-live-agency/tree/main/templates/nextjs-agency-dashboard
+
+## Methods
+
+<!-- methods:start -->
+- get_account / getAccount: GET /webcast/rate_limits (Sandbox). Your plan, per-minute limit, bulk check size and evaluation end date. Cached 5 minutes.
+- list_regions / listRegions: GET /webcast/leaderboard/global (Sandbox). Every ranked region with its code, label and live count, so you never hardcode region codes.
+- find_creators_to_recruit / findCreatorsToRecruit: GET /webcast/eligible_creators (Agency). Creators ranked in a region who are candidates to recruit, with your last known Backstage verdict per row.
+- iter_creators_to_recruit / iterCreatorsToRecruit: GET /webcast/eligible_creators (pages) (Agency). Walks every page of findCreatorsToRecruit and yields rows; waits for the rate-limit reset when needed.
+- is_free_to_join / isFreeToJoin: local, no request (No key). True when a recruit row's last known Backstage verdict is eligible. Not a live invite check.
+- new_creators / newCreators: GET /webcast/creator_digest (Agency). Creators who recently appeared in a region's recruit pool, newest first, with 7 and 30 day earnings estimates.
+- iter_new_creators / iterNewCreators: GET /webcast/creator_digest (pages) (Agency). Walks every page of newCreators and yields rows.
+- league_divisions / leagueDivisions: GET /webcast/leaderboard/league_divisions (Sandbox). League divisions in a region (A1, B2 ...) with member counts.
+- league_members / leagueMembers: GET /webcast/leaderboard/league_divisions (Sandbox). Creators in one or more league divisions. Names hidden on lower plans: Sandbox sees 3 masked rows, Basic and Pro the top 10 offline names, Ultra and up everything.
+- dropped_out_creators / droppedOutCreators: GET /webcast/leaderboard/region_movers (Sandbox). Creators who ranked on a region's board recently and fell below the cutoff, with diamonds needed to re-enter. Names unmasked on Agency.
+- league_dropouts / leagueDropouts: GET /webcast/leaderboard/league_movers (Sandbox). Per league division, creators who dropped out of the top 99. Names unmasked on Agency.
+- gaming_dropouts / gamingDropouts: GET /webcast/leaderboard/gaming_movers (Sandbox). Gaming creators who fell off the gaming boards. Beta.
+- board_history / boardHistory: GET /webcast/board_history (Sandbox). Who entered, left and moved on a board over a window (2h and 6h on Sandbox, 12h and 24h on Pro, 3d and point-in-time on Ultra).
+- leaderboard / leaderboard: GET /webcast/leaderboard (Sandbox). A region's daily board (any key). Weekly, gaming and shopping need Agency; league needs Ultra.
+- global_leaderboard / globalLeaderboard: GET /webcast/leaderboard/global (Sandbox). The top creators of every region in one call.
+- club_rankings / clubRankings: GET /webcast/leaderboard/teams (Sandbox). The clubs board for a region. Full list on Agency, 3-row preview below.
+- popular_live / popularLive: GET /webcast/leaderboard/popular (Sandbox). The Popular LIVE board for a region. Full list on Agency, 3-row preview below.
+- gaming_rankings / gamingRankings: GET /webcast/leaderboard/gaming (Sandbox). Gaming boards for a region, per game. Full list on Agency, 3-row preview below.
+- live_counts / liveCounts: GET /webcast/live-counts (Sandbox). How many creators are live right now, globally and per region.
+- top_gifters / topGifters: GET /webcast/gifters/leaderboard (Pro). The biggest gifters in a region over a rolling day, week or month. Masked on Pro and Ultra, unmasked on Agency.
+- get_creator / getCreator: GET /webcast/creator-core (Sandbox). A creator's region, current rank, board score and live state in one call.
+- get_creator_profile / getCreatorProfile: GET /webcast/user_profile (Pro). Full profile: followers, likes, videos, verified, private, app language. Daily lookup quota per plan.
+- find_renamed_creator / findRenamedCreator: GET /webcast/lookup_username (Sandbox). Finds the current handle of a creator who renamed, so a roster stays correct.
+- resolve_user_ids / resolveUserIds: POST /webcast/resolve_user_ids (Basic). Turns numeric TikTok user ids into handles.
+- get_creator_summary / getCreatorSummary: GET /webcast/agency/events?type=summary (Agency). Gifts, diamonds, gifters, battles, chat and likes for a creator over 1-90 days.
+- get_daily_diamonds / getDailyDiamonds: GET /webcast/agency/events?type=daily (Agency). Diamonds per UTC day from captured gifts, with a complete flag per day. A lower bound, not the Backstage payout figure.
+- get_creator_gifters / getCreatorGifters: GET /webcast/agency/events?type=gifters (Agency). Who sent a creator the most diamonds.
+- get_creator_gifts / getCreatorGifts: GET /webcast/agency/events?type=gifts (Agency). Which gifts a creator received, how many and from how many senders.
+- get_creator_battles / getCreatorBattles: GET /webcast/agency/events?type=battles (Agency). Battles with opponent, scores, result and duration.
+- get_creator_chat / getCreatorChat: GET /webcast/agency/events?type=chat (Agency). Chat messages from a creator's streams. Only for creators on one of your rosters.
+- get_creator_activity / getCreatorActivity: GET /webcast/agency/events?type=activity (Agency). Likes and viewer joins per day.
+- get_creator_goals / getCreatorGoals: GET /webcast/agency/events?type=goals (Agency). Stream goals with progress and top contributors.
+- list_rosters / listRosters: GET /webcast/agency/lists (Agency). Your rosters with member and live counts (max 50 rosters).
+- create_roster / createRoster: POST /webcast/agency/lists (Agency). Creates a named roster.
+- get_roster / getRoster: GET /webcast/agency/list (Agency). A roster's creators with live flag, score, followers and diamonds, live first.
+- delete_roster / deleteRoster: DELETE /webcast/agency/list (Agency). Deletes a roster.
+- add_to_roster / addToRoster: POST /webcast/agency/list/members (Agency). Adds creators (chunks of 200, max 1000 per roster). Gift and chat capture starts from that moment.
+- remove_from_roster / removeFromRoster: POST /webcast/agency/list/members (Agency). Removes creators from a roster.
+- roster_diamonds / rosterDiamonds: GET /webcast/agency/events (one per creator) (Agency). Diamonds per creator and in total for a roster or a list of handles. One request per creator.
+- is_live / isLive: GET /webcast/live_status (No key). Is this creator live right now? true, false, or null when it could not be determined. Works with no key.
+- is_live_detailed / isLiveDetailed: GET /webcast/live_status (No key). Same check with room id and cache flag.
+- who_is_live / whoIsLive: POST /webcast/bulk_live_check (Basic). Splits many creators into live, offline and unknown. Chunks to your plan's batch size (Basic 10, Pro 50, Ultra 100, Agency 200).
+- watch_live / watchLive: GET /webcast/live_status (polling, one per creator; POST /webcast/bulk_live_check on Basic and up) (Sandbox). Polls your creators and fires live and end events. A failed check never ends a stream; an end needs two offline polls in a row.
+- stream_big_gifts / streamBigGifts: WS /firehose/gifters (Agency). Real-time alerts for gifts of 1,000+ diamonds: global, one region (mode region, needs region), or one league division (mode league, needs league; region optional). Each alert carries the creator's league division in classType when known. Needs an active Agency subscription.
+- get_eligibility / getEligibility: GET /eligibility/results (Agency). The last invite verdicts your Backstage extension recorded for these creators. Does not run a new check.
+- get_eligibility_accounts / getEligibilityAccounts: GET /eligibility/limits (Agency). Your connected Backstage accounts with cooldowns, plus roster and premium totals.
+- list_webhooks / listWebhooks: GET /webcast/webhooks (Basic). Your webhooks, plan limits and today's delivery quota.
+- create_webhook / createWebhook: POST /webcast/webhooks (Basic). Sends signed events (live.start, live.end, more on higher plans) to your URL for chosen creators or rosters.
+- update_webhook / updateWebhook: PATCH /webcast/webhooks/{id} (Basic). Changes a webhook's URL, events, creators, rosters or active state.
+- delete_webhook / deleteWebhook: DELETE /webcast/webhooks/{id} (Basic). Deletes a webhook.
+- test_webhook / testWebhook: POST /webcast/webhooks/{id}/test (Basic). Sends a signed sample live.start to your URL and reports what it answered.
+- verify_webhook / verifyWebhook: local, no request (No key). Checks the X-Tiktool-Signature header against the raw body and your secret, rejects old timestamps, returns the typed event. No key needed.
+- to_discord_message / toDiscordMessage: local, no request (No key). Formats an event as a Discord message body.
+<!-- methods:end -->
+
+## Plans
+
+No key: is_live. Sandbox (free evaluation): boards, leagues, movers, get_creator, watch_live. Basic: who_is_live, webhooks (live.start, live.end), resolve_user_ids. Pro: top_gifters, get_creator_profile, 24h board history. Ultra: league board, peak viewer and big gift webhooks. Agency: recruiting, creator stats and diamonds, rosters, firehose, eligibility verdicts, all webhook events.
+
+## Docs
+
+- README: https://pypi.org/project/tiktok-live-agency/
+- npm: https://www.npmjs.com/package/tiktok-live-agency
+- Docs page: https://tik.tools/sdk/agency
+- Agency SDK llms.txt on the web: https://tik.tools/sdk/agency/llms.txt
+- Webhook reference: https://tik.tools/docs#webhook-create
+- Plans: https://tik.tools/pricing
+- Platform overview for AI systems: https://tik.tools/llms.txt

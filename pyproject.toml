@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tiktok-live-agency"
+version = "0.1.0"
+description = "Unofficial TikTok LIVE agency SDK by tik.tools: find creators to recruit, track diamonds and live status across your roster, and build your own agency dashboard. Not affiliated with or endorsed by TikTok or ByteDance."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "tik.tools", email = "support@tik.tools"}
+]
+keywords = [
+    "tiktok",
+    "tiktok-live",
+    "tiktok-live-agency",
+    "agency",
+    "creator-recruitment",
+    "creator-management",
+    "diamonds",
+    "live-status",
+    "roster",
+    "dashboard",
+    "tiktok-live-api",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: AsyncIO",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+realtime = ["websockets>=11.0"]
+dev = ["pytest>=7", "build>=1", "websockets>=13"]
+
+[project.urls]
+Homepage = "https://tik.tools/sdk/agency"
+Documentation = "https://tik.tools/sdk/agency"
+Repository = "https://github.com/tiktool/tiktok-live-agency-python"
+Issues = "https://github.com/tiktool/tiktok-live-agency-python/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tiktok_live_agency"]
+
+[tool.hatch.build.targets.sdist]
+include = ["tiktok_live_agency", "tests", "README.md", "llms.txt", "LICENSE", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
