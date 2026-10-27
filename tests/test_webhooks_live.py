@@ -23,7 +23,7 @@ PAYLOAD = json.dumps({
 
 
 def server_sign(body: str, ts: int, key: str = SECRET) -> str:
-    # Same algorithm as the server implementation.
+    # Reference signer using the documented algorithm.
     return f"t={ts},v1={hmac.new(key.encode(), f'{ts}.{body}'.encode(), hashlib.sha256).hexdigest()}"
 
 
